@@ -8,9 +8,18 @@ project 'Runner', {
   'Release' => :release,
 }
 
-require_relative '../flutter/packages/flutter_tools/bin/podhelper'
+# --- DYNAMIC FLUTTER PATH FIX ---
+# Checks Codemagic environment variable first, then falls back to local path
+flutter_root = ENV['FLUTTER_ROOT'] || File.expand_path(File.join('..', '..', 'flutter'), __FILE__)
+if !File.directory?(flutter_root)
+  # Fallback to standard local relative path just in case
+  flutter_root = File.expand_path(File.join('..', 'flutter'), __FILE__)
+end
 
-# --- THE FIX FOR THE RUNNERTESTS CRASH ---
+require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelper'), flutter_root)
+# --------------------------------
+
+# --- PHANTOM TARGET FIX ---
 pre_install do |installer|
   sandbox_project = installer.aggregate_targets.first.user_project
   test_target = sandbox_project.targets.find { |t| t.name == 'RunnerTests' }
@@ -19,13 +28,12 @@ pre_install do |installer|
     test_target.remove_from_project
   end
 end
-# ----------------------------------------
+# --------------------------
 
 target 'Runner' do
   use_frameworks! :linkage => :static
   use_modular_headers!
 
-  # Correct modern method name:
   flutter_install_all_ios_pods(File.dirname(File.realpath(__FILE__)))
 end
 
